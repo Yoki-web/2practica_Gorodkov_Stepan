@@ -73,6 +73,16 @@ class MavenTests(unittest.TestCase):
                  + declaration(version="") + "</dependencies>")
         self.assertEqual(self.repo.direct("org.test:root:1")[0].version, "8")
 
+    def test_child_overrides_parent_property(self):
+        """Свойство дочернего POM меняет версию унаследованной зависимости."""
+        self.add("org.test:parent:1", "<properties><v>3</v></properties>"
+                 "<dependencies>" + declaration(version="${v}")
+                 + "</dependencies>")
+        self.add("org.test:root:1", "<parent><groupId>org.test</groupId>"
+                 "<artifactId>parent</artifactId><version>1</version>"
+                 "</parent><properties><v>4</v></properties>")
+        self.assertEqual(self.repo.direct("org.test:root:1")[0].version, "4")
+
     def test_all_direct_scopes_and_optional_are_preserved(self):
         """Этап 2 выводит и тестовые, и необязательные прямые зависимости."""
         self.add("org.test:root:1", "<dependencies>"
@@ -102,7 +112,10 @@ class MavenTests(unittest.TestCase):
     def test_properties_errors_and_nested_expansion(self):
         """Подстановка поддерживает цепочки, но не циклы и неизвестные имена."""
         self.assertEqual(expand("${a}", {"a": "${b}", "b": "2"}), "2")
-        for properties in ({}, {"a": "${a}"}, {"a": "${b}", "b": "${a}"}):
+        for properties in (
+            {}, {"a": "${a}"}, {"a": "${b}", "b": "${a}"},
+            {"a": "${a}x"},
+        ):
             with self.subTest(properties=properties):
                 with self.assertRaises(ValueError):
                     expand("${a}", properties)

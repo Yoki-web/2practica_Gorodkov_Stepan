@@ -102,4 +102,3 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("Ошибка:", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
-

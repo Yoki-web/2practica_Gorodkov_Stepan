@@ -6,7 +6,7 @@ from urllib.request import Request, urlopen
 from .config import check_coordinate
 from .pom import (
     PomModel, dependency_key, dependency_name, make_dependency, parse_xml,
-    properties_for, raw_dependency, text,
+    properties_for, raw_dependency, resolve_row, text,
 )
 
 
@@ -57,7 +57,7 @@ def parent_coordinate(root):
 
 def management_rows(root, properties):
     """Прочитать управление зависимостями, включая импорты BOM."""
-    return [raw_dependency(node, properties)
+    return [resolve_row(raw_dependency(node), properties)
             for node in root.findall(MANAGED_PATH)]
 
 
@@ -72,16 +72,19 @@ def assemble_model(root, properties, parent, models):
     rows = management_rows(root, properties)
     managed = {}
     for coordinate in bom_coordinates(rows):
-        for key, value in models[coordinate].managed.items():
-            managed.setdefault(key, value)
+        bom = models[coordinate]
+        for key, value in bom.managed.items():
+            managed.setdefault(key, resolve_row(value, bom.properties))
     managed.update(parent.managed)
-    for row in rows:
-        if row["scope"] != "import":
-            managed[dependency_key(row)] = row
+    for node in root.findall(MANAGED_PATH):
+        row = raw_dependency(node)
+        resolved = resolve_row(row, properties)
+        if resolved["scope"] != "import":
+            managed[dependency_key(resolved)] = row
     declarations = dict(parent.declarations)
     for node in root.findall("dependencies/dependency"):
-        row = raw_dependency(node, properties)
-        declarations[dependency_key(row)] = row
+        row = raw_dependency(node)
+        declarations[dependency_key(resolve_row(row, properties))] = row
     return PomModel(properties, managed, declarations)
 
 
@@ -140,5 +143,5 @@ class MavenRepository:
     def direct(self, coordinate):
         """Вернуть все прямые зависимости с их областями и optional."""
         model = self.model(coordinate)
-        return [make_dependency(row, model.managed)
+        return [make_dependency(row, model.managed, model.properties)
                 for row in model.declarations.values()]

@@ -6,15 +6,17 @@ import sys
 
 from .config import load_config
 from .graph import analyze
-from .order import load_order
+from .visualization import ascii_tree, save_visualization
 
 
 def run(config):
-    """Этап 4: вывести порядок загрузки зависимостей построенного графа."""
+    """Этап 5: сохранить PlantUML/PNG и при необходимости вывести дерево."""
     graph = analyze(config)
-    print("Порядок загрузки: " + " -> ".join(load_order(graph)))
-    if graph.truncated:
-        print("Порядок относится к графу в пределах заданной глубины.")
+    if config.ascii_tree:
+        print(ascii_tree(graph))
+    save_visualization(graph, config.output)
+    print(f"PNG: {config.output}")
+    print(f"PlantUML: {config.output.with_suffix('.puml')}")
 
 
 def main(argv=None):

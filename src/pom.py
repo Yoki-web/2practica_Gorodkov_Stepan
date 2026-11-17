@@ -60,15 +60,15 @@ def text(node, path, default=""):
 
 def expand(value, properties):
     """Итеративно раскрыть свойства, обнаружив неизвестные ссылки и циклы."""
-    seen = set()
-    while PROPERTY.search(value):
-        if value in seen:
-            raise ValueError(f"POM: цикл свойств: {value}")
-        seen.add(value)
+    for attempt in range(len(properties) + 1):
+        if not PROPERTY.search(value):
+            return value
         for key in PROPERTY.findall(value):
             if key not in properties:
                 raise ValueError(f"POM: неизвестное свойство: {key}")
             value = value.replace("${" + key + "}", properties[key])
+    if PROPERTY.search(value):
+        raise ValueError("POM: цикл свойств")
     return value
 
 
@@ -92,19 +92,28 @@ def properties_for(root, coordinate, parent):
     return properties
 
 
-def raw_dependency(node, properties):
-    """Прочитать поля одной зависимости и список исключений."""
+def raw_dependency(node):
+    """Сохранить декларацию с шаблонами для переопределения в дочернем POM."""
     keys = (
         "groupId", "artifactId", "version", "scope", "optional", "type",
         "classifier",
     )
-    values = {key: expand(text(node, key), properties) for key in keys}
+    values = {key: text(node, key) for key in keys}
     values["exclusions"] = frozenset(
-        expand(text(item, "groupId"), properties) + ":"
-        + expand(text(item, "artifactId"), properties)
+        text(item, "groupId") + ":" + text(item, "artifactId")
         for item in node.findall("exclusions/exclusion")
     )
     return values
+
+
+def resolve_row(values, properties):
+    """Раскрыть шаблоны декларации в контексте ее эффективного проекта."""
+    result = {key: expand(value, properties) for key, value in values.items()
+              if key != "exclusions"}
+    result["exclusions"] = frozenset(
+        expand(item, properties) for item in values.get("exclusions", ())
+    )
+    return result
 
 
 def dependency_key(values):
@@ -120,10 +129,11 @@ def dependency_name(values):
     return values["groupId"] + ":" + values["artifactId"]
 
 
-def make_dependency(values, managed):
+def make_dependency(values, managed, properties):
     """Дополнить отсутствующие поля управляемыми значениями и проверить их."""
+    values = resolve_row(values, properties)
     name = dependency_name(values)
-    defaults = managed.get(dependency_key(values), {})
+    defaults = resolve_row(managed.get(dependency_key(values), {}), properties)
     fields = {key: value or defaults.get(key, "")
               for key, value in values.items()}
     version = fields["version"]
