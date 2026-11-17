@@ -3,15 +3,18 @@
 import argparse
 import csv
 import sys
-from dataclasses import asdict
 
 from .config import load_config
+from .maven import MavenRepository
 
 
 def run(config):
-    """Этап 1: вывести все проверенные параметры в формате ключ=значение."""
-    for key, value in asdict(config).items():
-        print(f"{key}={value}")
+    """Этап 2: вывести все прямые зависимости указанной версии Maven."""
+    if config.test_mode:
+        raise ValueError("Тестовый репозиторий реализуется на этапе 3")
+    repository = MavenRepository(config.repository)
+    for item in repository.direct(f"{config.package}:{config.version}"):
+        print(f"{item.coordinate} scope={item.scope} optional={item.optional}")
 
 
 def main(argv=None):

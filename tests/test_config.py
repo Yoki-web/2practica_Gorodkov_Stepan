@@ -4,7 +4,7 @@ import csv
 import io
 import tempfile
 import unittest
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import redirect_stderr
 from pathlib import Path
 
 from src.__main__ import main
@@ -103,11 +103,3 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("Ошибка:", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
 
-    def test_stage_one_output(self):
-        """Этап 1 выводит ровно семь строк ключ=значение."""
-        self.write_config()
-        stdout = io.StringIO()
-        with redirect_stdout(stdout):
-            self.assertEqual(main([str(self.path)]), 0)
-        keys = [line.split("=")[0] for line in stdout.getvalue().splitlines()]
-        self.assertEqual(keys, list(FIELDS))
