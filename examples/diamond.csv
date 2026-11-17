@@ -1,0 +1,8 @@
+key,value
+package,A
+repository,diamond_graph.csv
+test_mode,true
+version,1
+output,../generated/diamond.png
+ascii_tree,true
+max_depth,10

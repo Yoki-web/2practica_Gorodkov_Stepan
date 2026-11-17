@@ -1,0 +1,8 @@
+key,value
+package,A
+repository,cycle_graph.csv
+test_mode,true
+version,1
+output,../generated/cycle.png
+ascii_tree,true
+max_depth,10

@@ -5,16 +5,14 @@ import csv
 import sys
 
 from .config import load_config
-from .maven import MavenRepository
+from .graph import analyze
 
 
 def run(config):
-    """Этап 2: вывести все прямые зависимости указанной версии Maven."""
-    if config.test_mode:
-        raise ValueError("Тестовый репозиторий реализуется на этапе 3")
-    repository = MavenRepository(config.repository)
-    for item in repository.direct(f"{config.package}:{config.version}"):
-        print(f"{item.coordinate} scope={item.scope} optional={item.optional}")
+    """Этап 3: вывести список смежности построенного BFS-графа."""
+    graph = analyze(config)
+    for node, children in graph.edges.items():
+        print(f"{node} -> {', '.join(children) or '(нет зависимостей)'}")
 
 
 def main(argv=None):
