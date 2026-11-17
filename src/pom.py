@@ -94,7 +94,10 @@ def properties_for(root, coordinate, parent):
 
 def raw_dependency(node, properties):
     """Прочитать поля одной зависимости и список исключений."""
-    keys = ("groupId", "artifactId", "version", "scope", "optional", "type")
+    keys = (
+        "groupId", "artifactId", "version", "scope", "optional", "type",
+        "classifier",
+    )
     values = {key: expand(text(node, key), properties) for key in keys}
     values["exclusions"] = frozenset(
         expand(text(item, "groupId"), properties) + ":"
@@ -105,14 +108,22 @@ def raw_dependency(node, properties):
 
 
 def dependency_key(values):
-    """Получить имя зависимости без версии."""
+    """Различать обычный JAR и test-jar одного Maven-артефакта."""
+    return (
+        values["groupId"], values["artifactId"],
+        values.get("type") or "jar", values.get("classifier") or "",
+    )
+
+
+def dependency_name(values):
+    """Получить имя groupId:artifactId независимо от типа артефакта."""
     return values["groupId"] + ":" + values["artifactId"]
 
 
 def make_dependency(values, managed):
     """Дополнить отсутствующие поля управляемыми значениями и проверить их."""
-    name = dependency_key(values)
-    defaults = managed.get(name, {})
+    name = dependency_name(values)
+    defaults = managed.get(dependency_key(values), {})
     fields = {key: value or defaults.get(key, "")
               for key, value in values.items()}
     version = fields["version"]

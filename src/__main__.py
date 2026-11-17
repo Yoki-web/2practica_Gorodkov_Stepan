@@ -6,13 +6,15 @@ import sys
 
 from .config import load_config
 from .graph import analyze
+from .order import load_order
 
 
 def run(config):
-    """Этап 3: вывести список смежности построенного BFS-графа."""
+    """Этап 4: вывести порядок загрузки зависимостей построенного графа."""
     graph = analyze(config)
-    for node, children in graph.edges.items():
-        print(f"{node} -> {', '.join(children) or '(нет зависимостей)'}")
+    print("Порядок загрузки: " + " -> ".join(load_order(graph)))
+    if graph.truncated:
+        print("Порядок относится к графу в пределах заданной глубины.")
 
 
 def main(argv=None):

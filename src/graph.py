@@ -56,7 +56,8 @@ def build_graph(root, repository, max_depth):
     while queue:
         current, depth, blocked = queue.popleft()
         if depth >= max_depth:
-            graph.truncated.add(current)
+            if graph.depths[current] >= max_depth:
+                graph.truncated.add(current)
             continue
         for item in runtime_dependencies(repository, current, blocked):
             child = item.coordinate

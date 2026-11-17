@@ -5,24 +5,33 @@ from urllib.request import Request, urlopen
 
 from .config import check_coordinate
 from .pom import (
-    PomModel, dependency_key, make_dependency, parse_xml, properties_for,
-    raw_dependency, text,
+    PomModel, dependency_key, dependency_name, make_dependency, parse_xml,
+    properties_for, raw_dependency, text,
 )
 
 
 TIMEOUT_SECONDS = 30
+MAX_ATTEMPTS = 3
 MAX_POM_BYTES = 5 * 1024 * 1024
 MANAGED_PATH = "dependencyManagement/dependencies/dependency"
 
 
 def fetch_bytes(url):
-    """Загрузить ограниченный по размеру POM с таймаутом и диагностикой."""
+    """Загрузить POM; повторить временный сетевой сбой не более трех раз."""
+    last_error = None
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            return request_bytes(url)
+        except (URLError, OSError) as error:
+            last_error = error
+    raise ValueError(f"Не удалось получить POM {url}: {last_error}")
+
+
+def request_bytes(url):
+    """Выполнить один HTTP-запрос с ограничением времени и размера POM."""
     request = Request(url, headers={"User-Agent": "maven-graph-practice/1.0"})
-    try:
-        with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            content = response.read(MAX_POM_BYTES + 1)
-    except (URLError, OSError) as error:
-        raise ValueError(f"Не удалось получить POM {url}: {error}") from error
+    with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+        content = response.read(MAX_POM_BYTES + 1)
     if len(content) > MAX_POM_BYTES:
         raise ValueError(f"POM превышает допустимый размер: {url}")
     return content
@@ -54,7 +63,7 @@ def management_rows(root, properties):
 
 def bom_coordinates(rows):
     """Выделить координаты импортированных BOM в порядке объявления."""
-    return [dependency_key(row) + ":" + row["version"] for row in rows
+    return [dependency_name(row) + ":" + row["version"] for row in rows
             if row["scope"] == "import" and row["type"] == "pom"]
 
 

@@ -1,0 +1,27 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>practice</groupId>
+  <artifactId>dependency-comparison</artifactId>
+  <version>1.0</version>
+  <properties>
+    <sample.group>junit</sample.group>
+    <sample.artifact>junit</sample.artifact>
+    <sample.version>4.13.2</sample.version>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>${sample.group}</groupId>
+      <artifactId>${sample.artifact}</artifactId>
+      <version>${sample.version}</version>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.8.1</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

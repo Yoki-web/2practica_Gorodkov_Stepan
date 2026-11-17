@@ -90,6 +90,15 @@ class MavenTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "цикл"):
             self.repo.direct("org.test:root:1")
 
+    def test_main_jar_is_not_replaced_by_test_jar(self):
+        """Test-jar с тем же именем не затирает compile-зависимость."""
+        self.add("org.test:root:1", "<dependencies>" + declaration()
+                 + declaration(extra="<scope>test</scope>"
+                               "<type>test-jar</type>")
+                 + "</dependencies>")
+        items = self.repo.direct("org.test:root:1")
+        self.assertEqual([item.scope for item in items], ["compile", "test"])
+
     def test_properties_errors_and_nested_expansion(self):
         """Подстановка поддерживает цепочки, но не циклы и неизвестные имена."""
         self.assertEqual(expand("${a}", {"a": "${b}", "b": "2"}), "2")
