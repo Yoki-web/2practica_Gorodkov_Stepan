@@ -6,7 +6,7 @@ import sys
 
 from .config import load_config
 from .graph import analyze
-from .visualization import ascii_tree, save_visualization
+from .visualizer import ascii_tree, save_visualization
 
 
 def run(config):

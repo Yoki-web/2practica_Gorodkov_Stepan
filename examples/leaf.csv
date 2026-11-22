@@ -1,8 +1,0 @@
-key,value
-package,A
-repository,leaf_graph.csv
-test_mode,true
-version,1
-output,../generated/leaf.png
-ascii_tree,true
-max_depth,10

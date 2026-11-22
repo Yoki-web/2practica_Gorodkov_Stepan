@@ -2,8 +2,8 @@
 setlocal
 cd /d "%~dp0"
 if defined PYTHON (
-  "%PYTHON%" -B -m src %*
+  "%PYTHON%" -B -m src.main %*
 ) else (
-  python -B -m src %*
+  python -B -m src.main %*
 )
 exit /b %errorlevel%

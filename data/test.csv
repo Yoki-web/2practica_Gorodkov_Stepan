@@ -1,8 +1,8 @@
 key,value
 package,A
-repository,cycle_graph.csv
+repository,test_repo.txt
 test_mode,true
 version,1
-output,../generated/cycle.png
+output,../generated/test.png
 ascii_tree,true
 max_depth,10
