@@ -1,4 +1,4 @@
-"""Точка входа CLI; путь CSV является единственным позиционным аргументом."""
+"""Запуск из терминала."""
 
 import argparse
 import csv
@@ -10,7 +10,7 @@ from .visualizer import ascii_tree, save_visualization
 
 
 def run(config):
-    """Этап 5: сохранить PlantUML/PNG и при необходимости вывести дерево."""
+    """Этап 5. Построить и показать граф."""
     graph = analyze(config)
     if config.ascii_tree:
         print(ascii_tree(graph))
@@ -20,7 +20,7 @@ def run(config):
 
 
 def main(argv=None):
-    """Обработать аргументы, исполнить этап и вернуть код завершения."""
+    """Прочитать аргумент и запустить анализ."""
     parser = argparse.ArgumentParser(description="Maven: граф зависимостей")
     parser.add_argument("config", help="путь CSV-файла с настройками")
     args = parser.parse_args(argv)

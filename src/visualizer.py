@@ -1,4 +1,4 @@
-"""PlantUML, локальный PNG и нерекурсивное ASCII-дерево зависимостей."""
+"""Этап 5. PlantUML, PNG и дерево."""
 
 import os
 import subprocess
@@ -10,12 +10,12 @@ RENDER_TIMEOUT = 60
 
 
 def escape_label(value):
-    """Экранировать метку PlantUML независимо от источника графа."""
+    """Экранировать подпись."""
     return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
 
 
 def to_plantuml(graph):
-    """Сформировать стабильную диаграмму со всеми узлами и ребрами графа."""
+    """Собрать текст PlantUML."""
     lines = ["@startuml", "!pragma layout smetana", "left to right direction"]
     aliases = {node: f"n{index}" for index, node in enumerate(graph.edges)}
     for node, alias in aliases.items():
@@ -29,7 +29,7 @@ def to_plantuml(graph):
 
 
 def java_command():
-    """Найти Java и внешний PlantUML JAR, не загружая бинарники в Git."""
+    """Собрать команду PlantUML."""
     jar = Path(os.environ.get("PLANTUML_JAR", "plantuml.jar"))
     if not jar.is_file():
         raise ValueError("Укажите путь к plantuml.jar в PLANTUML_JAR")
@@ -40,7 +40,7 @@ def java_command():
 
 
 def render_png(source):
-    """Локально вызвать PlantUML и проверить результат перед сохранением."""
+    """Получить PNG через PlantUML."""
     try:
         result = subprocess.run(
             java_command(), input=source.encode("utf-8"),
@@ -56,7 +56,7 @@ def render_png(source):
 
 
 def save_visualization(graph, output):
-    """Сохранить исходник .puml рядом с требуемым изображением .png."""
+    """Записать .puml и .png."""
     source = to_plantuml(graph)
     image = render_png(source)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -65,7 +65,7 @@ def save_visualization(graph, output):
 
 
 def node_marker(node, path, expanded, graph):
-    """Различить цикл, повторную ссылку и границу глубины."""
+    """Выбрать пометку узла."""
     if node in path:
         return " [cycle]"
     if node in expanded:
@@ -76,7 +76,7 @@ def node_marker(node, path, expanded, graph):
 
 
 def push_children(stack, graph, node, prefix, path):
-    """Положить детей в стек в обратном порядке для стабильного вывода."""
+    """Положить соседей в стек."""
     children = graph.edges[node]
     last_index = len(children) - 1
     for index in reversed(range(len(children))):
@@ -84,7 +84,7 @@ def push_children(stack, graph, node, prefix, path):
 
 
 def ascii_tree(graph):
-    """Вывести конечное ASCII-дерево; общие узлы и циклы не дублируются."""
+    """Собрать ASCII-дерево через DFS."""
     root_marker = " [depth limit]" if graph.root in graph.truncated else ""
     lines = [graph.root + root_marker]
     expanded = {graph.root}

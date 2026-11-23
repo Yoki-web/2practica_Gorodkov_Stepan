@@ -1,4 +1,4 @@
-"""Получение и разбор Maven POM."""
+"""Этап 2. Чтение POM."""
 
 import re
 import xml.etree.ElementTree as element_tree
@@ -17,7 +17,7 @@ SUPPORTED_SCOPES = {
 
 @dataclass(frozen=True)
 class Dependency:
-    """Координаты зависимости и метаданные ее ребра в графе."""
+    """Данные зависимости."""
 
     name: str
     version: str
@@ -27,13 +27,13 @@ class Dependency:
 
     @property
     def coordinate(self):
-        """Вернуть полные координаты groupId:artifactId:version."""
+        """Координаты с версией."""
         return f"{self.name}:{self.version}"
 
 
 @dataclass
 class PomModel:
-    """Эффективные свойства, управление версиями и декларации POM."""
+    """Свойства, версии и зависимости POM."""
 
     properties: dict = field(default_factory=dict)
     managed: dict = field(default_factory=dict)
@@ -41,7 +41,7 @@ class PomModel:
 
 
 def parse_xml(content):
-    """Прочитать POM с namespace или без него, отклоняя DTD."""
+    """Разобрать XML POM."""
     if b"<!DOCTYPE" in content.upper() or b"<!ENTITY" in content.upper():
         raise ValueError("POM: DTD и сущности не поддерживаются")
     try:
@@ -56,12 +56,12 @@ def parse_xml(content):
 
 
 def text(node, path, default=""):
-    """Получить текст элемента без внешних пробелов."""
+    """Прочитать текст тега."""
     return (node.findtext(path) or default).strip()
 
 
 def expand(value, properties):
-    """Итеративно раскрыть свойства, обнаружив неизвестные ссылки и циклы."""
+    """Раскрыть ссылки на свойства."""
     for attempt in range(len(properties) + 1):
         if not PROPERTY.search(value):
             return value
@@ -75,7 +75,7 @@ def expand(value, properties):
 
 
 def properties_for(root, coordinate, parent):
-    """Объединить свойства родителя, проекта и стандартные координаты."""
+    """Собрать свойства проекта и родителя."""
     properties = dict(parent.properties)
     element = root.find("properties")
     if element is not None:
@@ -95,7 +95,7 @@ def properties_for(root, coordinate, parent):
 
 
 def raw_dependency(node):
-    """Сохранить декларацию с шаблонами для переопределения в дочернем POM."""
+    """Прочитать поля зависимости."""
     keys = (
         "groupId", "artifactId", "version", "scope", "optional", "type",
         "classifier",
@@ -109,7 +109,7 @@ def raw_dependency(node):
 
 
 def resolve_row(values, properties):
-    """Раскрыть шаблоны декларации в контексте ее эффективного проекта."""
+    """Подставить свойства в поля."""
     result = {key: expand(value, properties) for key, value in values.items()
               if key != "exclusions"}
     result["exclusions"] = frozenset(
@@ -119,7 +119,7 @@ def resolve_row(values, properties):
 
 
 def dependency_key(values):
-    """Различать обычный JAR и test-jar одного Maven-артефакта."""
+    """Ключ с типом и классификатором."""
     return (
         values["groupId"], values["artifactId"],
         values.get("type") or "jar", values.get("classifier") or "",
@@ -127,12 +127,12 @@ def dependency_key(values):
 
 
 def dependency_name(values):
-    """Получить имя groupId:artifactId независимо от типа артефакта."""
+    """Имя groupId:artifactId."""
     return values["groupId"] + ":" + values["artifactId"]
 
 
 def make_dependency(values, managed, properties):
-    """Дополнить отсутствующие поля управляемыми значениями и проверить их."""
+    """Собрать и проверить зависимость."""
     values = resolve_row(values, properties)
     name = dependency_name(values)
     defaults = resolve_row(managed.get(dependency_key(values), {}), properties)
@@ -159,7 +159,7 @@ MANAGED_PATH = "dependencyManagement/dependencies/dependency"
 
 
 def fetch_bytes(url):
-    """Загрузить POM; повторить временный сетевой сбой не более трех раз."""
+    """Скачать POM с повторами."""
     last_error = None
     for attempt in range(MAX_ATTEMPTS):
         try:
@@ -170,7 +170,7 @@ def fetch_bytes(url):
 
 
 def request_bytes(url):
-    """Выполнить один HTTP-запрос с ограничением времени и размера POM."""
+    """Сделать один HTTP-запрос."""
     request = Request(url, headers={"User-Agent": "maven-graph-practice/1.0"})
     with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
         content = response.read(MAX_POM_BYTES + 1)
@@ -180,7 +180,7 @@ def request_bytes(url):
 
 
 def pom_url(repository, coordinate):
-    """Построить стандартный путь Maven для конкретной версии пакета."""
+    """Собрать адрес POM по версии."""
     group, artifact, version = coordinate.split(":")
     check_coordinate(f"{group}:{artifact}", version, False)
     path = group.replace(".", "/")
@@ -188,7 +188,7 @@ def pom_url(repository, coordinate):
 
 
 def parent_coordinate(root):
-    """Вернуть координаты родительского POM либо None."""
+    """Найти координаты родителя."""
     node = root.find("parent")
     if node is None:
         return None
@@ -198,19 +198,19 @@ def parent_coordinate(root):
 
 
 def management_rows(root, properties):
-    """Прочитать управление зависимостями, включая импорты BOM."""
+    """Прочитать dependencyManagement."""
     return [resolve_row(raw_dependency(node), properties)
             for node in root.findall(MANAGED_PATH)]
 
 
 def bom_coordinates(rows):
-    """Выделить координаты импортированных BOM в порядке объявления."""
+    """Найти импортируемые BOM."""
     return [dependency_name(row) + ":" + row["version"] for row in rows
             if row["scope"] == "import" and row["type"] == "pom"]
 
 
 def assemble_model(root, properties, parent, models):
-    """Объединить родительскую модель, BOM и локальные декларации."""
+    """Собрать модель POM."""
     rows = management_rows(root, properties)
     managed = {}
     for coordinate in bom_coordinates(rows):
@@ -231,24 +231,24 @@ def assemble_model(root, properties, parent, models):
 
 
 class MavenRepository:
-    """Кешируемый HTTP-репозиторий с итеративным разрешением parent/BOM."""
+    """Maven-источник с кешем."""
 
     def __init__(self, repository, fetcher=fetch_bytes):
-        """Сохранить URL и транспорт; тесты подставляют локальный транспорт."""
+        """Задать адрес и загрузчик."""
         self.repository = repository.rstrip("/")
         self.fetcher = fetcher
         self.roots = {}
         self.models = {}
 
     def root(self, coordinate):
-        """Скачать и разобрать POM не более одного раза за запуск."""
+        """Взять XML из кеша или сети."""
         if coordinate not in self.roots:
             url = pom_url(self.repository, coordinate)
             self.roots[coordinate] = parse_xml(self.fetcher(url))
         return self.roots[coordinate]
 
     def prerequisites(self, root, coordinate):
-        """Найти еще не загруженные parent/BOM текущего POM."""
+        """Найти нужные parent и BOM."""
         parent_name = parent_coordinate(root)
         if parent_name and parent_name not in self.models:
             return [parent_name]
@@ -259,7 +259,7 @@ class MavenRepository:
                 if name not in self.models]
 
     def model(self, coordinate):
-        """Построить модель без рекурсии и отклонить циклы parent/BOM."""
+        """Собрать модель без рекурсии."""
         pending = [coordinate]
         while pending:
             current = pending[-1]
@@ -283,7 +283,7 @@ class MavenRepository:
         return self.models[coordinate]
 
     def direct(self, coordinate):
-        """Вернуть все прямые зависимости с их областями и optional."""
+        """Вернуть прямые зависимости."""
         model = self.model(coordinate)
         return [make_dependency(row, model.managed, model.properties)
                 for row in model.declarations.values()]

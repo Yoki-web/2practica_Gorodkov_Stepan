@@ -1,4 +1,4 @@
-"""Чтение и проверка семи параметров CSV-конфигурации."""
+"""Этап 1. Настройки CSV."""
 
 import csv
 import re
@@ -18,7 +18,7 @@ PACKAGE = rf"{TOKEN}:{TOKEN}"
 
 @dataclass(frozen=True)
 class Config:
-    """Проверенные настройки; пути отсчитываются от CSV-файла."""
+    """Настройки программы."""
 
     package: str
     repository: str
@@ -30,7 +30,7 @@ class Config:
 
 
 def read_rows(path):
-    """Прочитать CSV key,value без пропусков, дубликатов и лишних ключей."""
+    """Прочитать и проверить строки CSV."""
     with path.open(encoding="utf-8-sig", newline="") as stream:
         rows = csv.reader(stream, strict=True)
         if next(rows, None) != ["key", "value"]:
@@ -52,7 +52,7 @@ def read_rows(path):
 
 
 def boolean(value, key):
-    """Принять только true/false без учета регистра."""
+    """Разобрать true/false."""
     normalized = value.lower()
     if normalized not in {"true", "false"}:
         raise ValueError(f"{key}: требуется true или false")
@@ -60,14 +60,14 @@ def boolean(value, key):
 
 
 def depth(value):
-    """Проверить неотрицательную целую глубину; корень имеет глубину 0."""
+    """Разобрать глубину от нуля."""
     if not re.fullmatch(r"[0-9]+", value):
         raise ValueError("max_depth: требуется целое число >= 0")
     return int(value)
 
 
 def check_coordinate(package, version, test_mode):
-    """Проверить имя пакета и фиксированную версию без диапазонов."""
+    """Проверить имя пакета и версию."""
     pattern = r"[A-Z]" if test_mode else PACKAGE
     if not re.fullmatch(pattern, package):
         raise ValueError("package: нужна A-Z или Maven groupId:artifactId")
@@ -78,7 +78,7 @@ def check_coordinate(package, version, test_mode):
 
 
 def repository_path(value, test_mode, base):
-    """Проверить существующий тестовый файл либо HTTP(S)-адрес Maven."""
+    """Проверить источник графа."""
     if test_mode:
         path = (base / value).resolve()
         if not path.is_file():
@@ -88,7 +88,7 @@ def repository_path(value, test_mode, base):
 
 
 def repository_url(value):
-    """Проверить структуру URL и запретить неоднозначные компоненты."""
+    """Проверить адрес HTTP(S)."""
     url = urlsplit(value)
     if url.scheme not in {"http", "https"} or not url.hostname:
         raise ValueError("repository: требуется HTTP(S) URL")
@@ -104,7 +104,7 @@ def repository_url(value):
 
 
 def output_path(value, base):
-    """Проверить путь PNG; каталоги создаются только при визуализации."""
+    """Проверить путь PNG."""
     path = (base / value).resolve()
     if path.suffix.lower() != ".png" or path.is_dir():
         raise ValueError("output: требуется имя файла с расширением .png")
@@ -117,7 +117,7 @@ def output_path(value, base):
 
 
 def load_config(filename):
-    """Загрузить конфигурацию и проверить каждый пользовательский параметр."""
+    """Собрать настройки из CSV."""
     path = Path(filename).resolve()
     values = read_rows(path)
     test_mode = boolean(values["test_mode"], "test_mode")

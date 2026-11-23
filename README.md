@@ -1,51 +1,43 @@
 # Maven Dependency Visualizer
 
-Практика № 2, вариант 6. Граф зависимостей Maven-пакетов по POM или тестовому файлу.
+Практика № 2, вариант 6. Граф зависимостей Maven.
 
 ## Запуск
 
-Python 3.10+, Java и [PlantUML JAR](https://plantuml.com/download). Сборка не нужна.
+Python 3.10+, Java и PlantUML. Сборка не нужна. Пути ниже для моего ПК.
 
 ```powershell
-$env:PLANTUML_JAR = 'C:\Tools\plantuml.jar'
+$demoPyRoot = 'C:\Program Files\WindowsApps\OpenAI.CodexPrimaryRuntime.v26-1119-907-0_26.1119.907.0_x64__3k8sg7r9htsxt'
+$env:PYTHON = Join-Path $demoPyRoot 'dependencies\python\python.exe'
+$env:JAVA_HOME = 'C:\Program Files\Java\jdk-21.0.12.1'
+$env:PLANTUML_JAR = 'C:\Users\stepa\Documents\Codex\2026-11-17\x20\work\tools\plantuml.jar'
+$env:PYTHONUTF8 = '1'
 .\run.bat config.csv
-python -B -m unittest -v
 ```
 
-Укажи путь к своему JAR. Без `run.bat` — `python -B -m src.main config.csv`.
-При необходимости задай путь к Python через `PYTHON`, к Java — через `JAVA_HOME`.
-PNG и PlantUML сохраняются в `generated/`.
+PNG и `.puml` лежат в `generated/`. Тесты — `& $env:PYTHON -B -m unittest -q`.
 
-## Настройки
+## Проверка
 
-`package` — имя пакета, `version` — версия, `repository` — URL или путь к TXT.
-`test_mode=true` выбирает TXT с пакетами A–Z, `false` — Maven и имя `groupId:artifactId`.
-`output` — путь к PNG, `ascii_tree` — вывод в терминал, `max_depth` — глубина от 0.
-Относительные пути считаются от `config.csv`.
+Меняю строки в `config.csv`, сохраняю и снова запускаю `run.bat`.
 
-## Функции
+| Что поставить в `config.csv` | Что показать преподавателю |
+| --- | --- |
+| `package,A`, `max_depth,10` | Ромб с двумя стрелками к D. В дереве второй D помечен `[shared]`. |
+| `package,A`, `max_depth,1` | Остаются A, B и C. D за пределами глубины. |
+| `package,E`, `max_depth,10` | Цикл E → F → G → E. Есть `[cycle]`, обход завершился. |
 
-- [config.py](src/config.py) и [main.py](src/main.py) проверяют CSV и запускают анализ.
-- [maven.py](src/maven.py) загружает POM и раскрывает свойства, наследование и управляемые версии.
-- [graph.py](src/graph.py) читает TXT, строит граф BFS без рекурсии и считает порядок загрузки.
-- [visualizer.py](src/visualizer.py) печатает дерево через стек и сохраняет PlantUML и PNG.
+Для проверки JUnit меняю эти строки:
 
-## Примеры
+```csv
+package,junit:junit
+repository,https://repo.maven.apache.org/maven2
+test_mode,false
+version,4.13.2
+output,generated/junit.png
+```
 
-Тестовый `config.csv` запускает ромб от A. Корень E показывает цикл, H — цепочку, L — лист.
-Для Maven задай `test_mode,false` и `repository,https://repo.maven.apache.org/maven2`.
-Для каждой строки ниже подставь имя и версию в `package` и `version` и запусти ту же команду.
-
-| Пакет | Версия | Зависимость из `dependency:tree -Dscope=runtime` |
-| --- | --- | --- |
-| `junit:junit` | `4.13.2` | `org.hamcrest:hamcrest-core:1.3` |
-| `org.apache.commons:commons-text` | `1.10.0` | `org.apache.commons:commons-lang3:3.12.0` |
-| `org.slf4j:slf4j-simple` | `2.0.13` | `org.slf4j:slf4j-api:2.0.13` |
-
-Графы совпали с Maven для этих примеров. Граф включает обязательные compile/runtime-зависимости.
-Профили, диапазоны, SNAPSHOT, relocation и разрешение конфликтов версий не реализованы.
-
-Этапы сохранены в `stage-1`–`stage-5`. На метках конфигурации лежат в `examples/`.
-На этапе 4 ромб даёт D, B, C, A. Для JUnit Hamcrest стоит раньше JUnit по зависимостям,
-хотя Maven первым начал скачивать JUnit. Скачивание JAR может идти до готовности его зависимостей.
-Команды сравнения и POM находятся в [этапе 5](https://github.com/Yoki-web/2practica_Gorodkov_Stepan/tree/stage-5).
+`package` и `version` задают пакет. `test_mode` выбирает TXT или URL из `repository`.
+`output` задаёт PNG, `ascii_tree` включает дерево, `max_depth` ограничивает глубину.
+Граф строится BFS из TXT или POM. DFS выводит дерево, PlantUML рисует PNG.
+Порядок загрузки — [stage-4](../../tree/stage-4). Три примера и сравнение с Maven — [stage-5](../../tree/stage-5).

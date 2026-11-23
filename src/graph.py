@@ -1,4 +1,4 @@
-"""BFS, тестовый репозиторий и порядок загрузки."""
+"""Этап 3. Граф зависимостей."""
 
 import re
 from collections import deque
@@ -13,7 +13,7 @@ RUNTIME_SCOPES = {"compile", "runtime"}
 
 @dataclass
 class Graph:
-    """Ориентированный граф: ребро идет от пакета к его зависимости."""
+    """Стрелка ведёт от пакета к зависимости."""
 
     root: str
     edges: dict
@@ -22,14 +22,14 @@ class Graph:
 
 
 def excluded(name, exclusions):
-    """Проверить Maven-исключения group:artifact с поддержкой символа *."""
+    """Проверить исключение Maven."""
     group, artifact = name.split(":")
     candidates = {name, f"{group}:*", f"*:{artifact}", "*:*"}
     return bool(candidates & exclusions)
 
 
 def runtime_dependencies(repository, coordinate, exclusions):
-    """Выбрать обязательные compile/runtime-зависимости для потребителя."""
+    """Выбрать обязательные compile/runtime."""
     result = []
     for dependency in repository.direct(coordinate):
         if dependency.scope not in RUNTIME_SCOPES or dependency.optional:
@@ -41,7 +41,7 @@ def runtime_dependencies(repository, coordinate, exclusions):
 
 
 def add_edge(graph, source, target, depth):
-    """Добавить уникальное ребро и зарегистрировать новый узел графа."""
+    """Добавить ребро и глубину узла."""
     if target not in graph.edges[source]:
         graph.edges[source].append(target)
     graph.edges.setdefault(target, [])
@@ -49,7 +49,7 @@ def add_edge(graph, source, target, depth):
 
 
 def build_graph(root, repository, max_depth):
-    """Обойти граф очередью BFS; повторный узел не вызывает зацикливания."""
+    """Обойти граф через очередь BFS."""
     graph = Graph(root, {root: []}, {root: 0}, set())
     initial = (root, frozenset())
     queue = deque([(root, 0, frozenset())])
@@ -72,7 +72,7 @@ def build_graph(root, repository, max_depth):
 
 
 def analyze(config):
-    """Создать выбранный источник и построить граф указанной версии."""
+    """Выбрать источник и построить граф."""
     if config.test_mode:
         repository = TestRepository(config.repository, config.version)
         if config.package not in repository.graph:
@@ -85,7 +85,7 @@ def analyze(config):
 
 
 def reverse_edges(graph):
-    """Для каждой зависимости найти использующие ее пакеты."""
+    """Найти потребителей каждого пакета."""
     dependents = {node: [] for node in graph.edges}
     for node, children in graph.edges.items():
         for child in children:
@@ -94,7 +94,7 @@ def reverse_edges(graph):
 
 
 def load_order(graph):
-    """Итеративно упорядочить DAG алгоритмом Кана; цикл дает ошибку."""
+    """Этап 4. Порядок загрузки по Кану."""
     remaining = {node: len(children) for node, children in graph.edges.items()}
     dependents = reverse_edges(graph)
     ready = deque(node for node, count in remaining.items() if not count)
@@ -112,7 +112,7 @@ def load_order(graph):
 
 
 def parse_test_line(line):
-    """Прочитать строку A -> B, C или A -> для листа."""
+    """Разобрать строку A -> B, C."""
     match = re.fullmatch(r"([A-Z])\s*->\s*([A-Z](?:\s*,\s*[A-Z])*)?", line)
     if match is None:
         raise ValueError("Тестовый граф: нужна строка A -> B, C")
@@ -122,7 +122,7 @@ def parse_test_line(line):
 
 
 def read_graph(path):
-    """Загрузить тестовый граф и проверить имена и ссылки."""
+    """Прочитать и проверить тестовый граф."""
     graph = {}
     for line in Path(path).read_text(encoding="utf-8-sig").splitlines():
         if not line.strip():
@@ -138,15 +138,15 @@ def read_graph(path):
 
 
 class TestRepository:
-    """Адаптер тестового графа к интерфейсу получения зависимостей."""
+    """Источник из тестового файла."""
 
     def __init__(self, path, version):
-        """Загрузить граф; всем его пакетам назначить указанную версию."""
+        """Прочитать граф и запомнить версию."""
         self.graph = read_graph(path)
         self.version = version
 
     def direct(self, coordinate):
-        """Получить зависимости пакета либо сообщить об отсутствующем узле."""
+        """Вернуть прямые зависимости."""
         package, version = coordinate.split(":")
         if version != self.version or package not in self.graph:
             raise ValueError(f"Нет пакета в тестовом репозитории: {coordinate}")
