@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.error import URLError
 
-from src.config import FIELDS, load_config
+from src.config import Config, FIELDS, load_config
 from src.graph import (
     Graph, TestRepository, analyze, build_graph, load_order, read_graph,
 )
@@ -273,6 +273,16 @@ def simple_repository(edges):
     })
 
 
+def local_config():
+    """Подготовить тестовый режим независимо от настроек пользователя."""
+    root = Path(__file__).resolve().parents[1]
+    return Config(
+        package="A", repository=str(root / "data/test_repo.txt"),
+        test_mode=True, version="1", output=root / "generated/test.png",
+        ascii_tree=True, max_depth=10,
+    )
+
+
 class GraphTests(unittest.TestCase):
     """Сценарии графа проверяют наблюдаемый результат и порядок запросов."""
 
@@ -357,8 +367,7 @@ class GraphTests(unittest.TestCase):
 
     def test_data_scenarios(self):
         """Проверить четыре примера в общем файле тестового репозитория."""
-        root = Path(__file__).resolve().parents[1]
-        config = load_config(root / "data/test.csv")
+        config = local_config()
         diamond = analyze(config)
         self.assertEqual(load_order(diamond), ["D:1", "B:1", "C:1", "A:1"])
         cycle = analyze(replace(config, package="E"))
@@ -488,8 +497,7 @@ class VisualizationTests(unittest.TestCase):
 
     def test_cli_ascii_flag_and_stage_specific_output(self):
         """Финальный CLI не выводит настройки/порядок предыдущих этапов."""
-        root = Path(__file__).resolve().parents[1]
-        config = load_config(root / "data/test.csv")
+        config = local_config()
         for enabled in (True, False):
             stdout = io.StringIO()
             with self.subTest(enabled=enabled), redirect_stdout(stdout):

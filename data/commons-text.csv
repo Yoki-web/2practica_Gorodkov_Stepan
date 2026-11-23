@@ -1,8 +1,0 @@
-key,value
-package,org.apache.commons:commons-text
-repository,https://repo.maven.apache.org/maven2
-test_mode,false
-version,1.10.0
-output,../generated/commons-text.png
-ascii_tree,true
-max_depth,10
