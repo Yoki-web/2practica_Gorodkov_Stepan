@@ -4,7 +4,7 @@
 
 ## Запуск
 
-Python 3.10+, Java и PlantUML. Сборка не нужна. Пути ниже для моего ПК.
+Python 3.10+, Java и PlantUML. Сборка не требуется. Пути к инструментам локальные.
 
 ```powershell
 $demoPyRoot = 'C:\Program Files\WindowsApps\OpenAI.CodexPrimaryRuntime.v26-1119-907-0_26.1119.907.0_x64__3k8sg7r9htsxt'
@@ -15,19 +15,17 @@ $env:PYTHONUTF8 = '1'
 .\run.bat config.csv
 ```
 
-PNG и `.puml` лежат в `generated/`. Тесты — `& $env:PYTHON -B -m unittest -q`.
+Результаты — PNG и `.puml` в `generated/`. Тесты — `& $env:PYTHON -B -m unittest -q`.
 
-## Проверка
+## Тестовые графы
 
-Меняю строки в `config.csv`, сохраняю и снова запускаю `run.bat`.
-
-| Что поставить в `config.csv` | Что показать преподавателю |
+| Строки в `config.csv` | Результат |
 | --- | --- |
-| `package,A`, `max_depth,10` | Ромб с двумя стрелками к D. В дереве второй D помечен `[shared]`. |
-| `package,A`, `max_depth,1` | Остаются A, B и C. D за пределами глубины. |
-| `package,E`, `max_depth,10` | Цикл E → F → G → E. Есть `[cycle]`, обход завершился. |
+| `package,A`, `max_depth,10` | Ромб. D — общая зависимость (`[shared]`). |
+| `package,A`, `max_depth,1` | A, B и C. D за пределами глубины. |
+| `package,E`, `max_depth,10` | Цикл E → F → G → E (`[cycle]`). |
 
-Для проверки JUnit меняю эти строки:
+## JUnit
 
 ```csv
 package,junit:junit
@@ -37,7 +35,7 @@ version,4.13.2
 output,generated/junit.png
 ```
 
-`package` и `version` задают пакет. `test_mode` выбирает TXT или URL из `repository`.
-`output` задаёт PNG, `ascii_tree` включает дерево, `max_depth` ограничивает глубину.
-Граф строится BFS из TXT или POM. DFS выводит дерево, PlantUML рисует PNG.
+`package`, `version` — пакет и версия. `repository` — TXT или URL. `test_mode` — выбор источника.
+`output` — путь PNG, `ascii_tree` — вывод дерева, `max_depth` — предел глубины.
+BFS — построение графа. DFS — вывод дерева. PlantUML — рендеринг PNG.
 Порядок загрузки — [stage-4](../../tree/stage-4). Три примера и сравнение с Maven — [stage-5](../../tree/stage-5).
