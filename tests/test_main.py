@@ -471,6 +471,21 @@ class VisualizationTests(unittest.TestCase):
             source = output.with_suffix(".puml").read_text(encoding="utf-8")
             self.assertEqual(source, to_plantuml(self.graph))
 
+    def test_renderer_error_preserves_previous_output(self):
+        """При ошибке PlantUML оба файла прежнего запуска сохраняются."""
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / "graph.png"
+            source = output.with_suffix(".puml")
+            output.write_bytes(b"previous image")
+            source.write_text("previous graph", encoding="utf-8")
+            error = ValueError("Ошибка PlantUML")
+            with patch("src.visualizer.render_png", side_effect=error):
+                with self.assertRaisesRegex(ValueError, "PlantUML"):
+                    save_visualization(self.graph, output)
+            self.assertEqual(source.read_text(encoding="utf-8"),
+                             "previous graph")
+            self.assertEqual(output.read_bytes(), b"previous image")
+
     def test_cli_ascii_flag_and_stage_specific_output(self):
         """Финальный CLI не выводит настройки/порядок предыдущих этапов."""
         root = Path(__file__).resolve().parents[1]

@@ -58,9 +58,9 @@ def render_png(source):
 def save_visualization(graph, output):
     """Сохранить исходник .puml рядом с требуемым изображением .png."""
     source = to_plantuml(graph)
+    image = render_png(source)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.with_suffix(".puml").write_text(source, encoding="utf-8")
-    image = render_png(source)
     output.write_bytes(image)
 
 
